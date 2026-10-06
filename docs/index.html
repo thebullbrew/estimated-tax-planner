@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Estimated Tax Planner — Quarterly Taxes, Tamed</title>
+<meta name="description" content="Estimate your annual tax bill, split it into four quarterly payments, and use the safe-harbor rule to make underpayment penalties impossible.">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0B0B0D">
+<link rel="icon" href="./icons/icon-32.png">
+<style>
+  :root{
+    --bg:#0B0B0D; --surface:#141417; --text:#F4F1E8; --dim:#A9A49A;
+    --accent:#C8B98A; --accent2:#4A4A52; --line:#2A2A30; --good:#8FBF7A; --warn:#D08A7A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    line-height:1.65; font-size:16px;
+    background-image:
+      radial-gradient(ellipse 70% 45% at 15% 8%, rgba(200,185,138,.035), transparent 60%),
+      radial-gradient(ellipse 55% 40% at 88% 22%, rgba(74,74,82,.18), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 50% 95%, rgba(200,185,138,.02), transparent 60%);
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:0 22px 90px}
+  .eyebrow{
+    text-align:center; color:var(--accent); letter-spacing:.32em; text-transform:uppercase;
+    font-size:11px; margin:44px 0 18px; font-weight:600;
+  }
+  h1{
+    font-family:Georgia,"Times New Roman",serif; font-weight:400; text-align:center;
+    font-size:clamp(2.1rem,6vw,3.2rem); margin:0 0 14px; letter-spacing:.01em; line-height:1.15;
+  }
+  h1 em{font-style:italic; color:var(--accent)}
+  .lede{max-width:620px; margin:0 auto 8px; text-align:center; color:var(--dim); font-size:1.02rem}
+  .lede strong{color:var(--text); font-weight:600}
+  .rule{width:64px; height:1px; background:var(--accent); opacity:.55; margin:26px auto}
+  h2.sec{
+    font-family:Georgia,serif; font-style:italic; font-weight:400; font-size:1.45rem;
+    margin:54px 0 6px; color:var(--text);
+  }
+  .sec-sub{color:var(--dim); margin:0 0 20px; font-size:.95rem}
+  .panel{
+    border:1px solid var(--line); border-radius:6px; padding:26px 24px; margin:0 0 18px;
+    background:
+      radial-gradient(ellipse 65% 45% at 18% 25%, rgba(200,185,138,.028), transparent 60%),
+      radial-gradient(ellipse 55% 40% at 82% 78%, rgba(74,74,82,.22), transparent 60%),
+      var(--surface);
+  }
+  .ghost{border:1px solid var(--line); border-radius:6px; padding:20px; background:rgba(20,20,23,.55)}
+  .steps{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:26px 0 6px}
+  .step{border:1px solid var(--line); border-radius:6px; padding:18px 16px; background:rgba(20,20,23,.55)}
+  .step .n{
+    font-family:Georgia,serif; font-style:italic; color:var(--accent); font-size:1.5rem; display:block; margin-bottom:6px;
+  }
+  .step p{margin:0; font-size:.9rem; color:var(--dim)}
+  .step p strong{color:var(--text)}
+  label{display:block; font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin:18px 0 7px}
+  input[type=number], input[type=text], select{
+    width:100%; background:#0E0E11; border:1px solid var(--line); color:var(--text);
+    border-radius:4px; padding:13px 14px; font-size:1rem; font-family:inherit;
+  }
+  input:focus, select:focus{outline:none; border-color:var(--accent)}
+  input[type=range]{width:100%; accent-color:var(--accent); height:34px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:0 22px}
+  .checkrow{display:flex; align-items:center; gap:10px; margin-top:16px; font-size:.95rem; color:var(--dim)}
+  .checkrow input{width:20px; height:20px; accent-color:var(--accent)}
+  .btn{
+    display:inline-block; border:1px solid var(--accent); background:transparent; color:var(--accent);
+    padding:13px 30px; border-radius:4px; font-size:.95rem; letter-spacing:.12em; text-transform:uppercase;
+    cursor:pointer; font-family:inherit; margin-top:22px; transition:background .2s,color .2s;
+  }
+  .btn:hover{background:var(--accent); color:#0B0B0D}
+  .btn.solid{background:var(--accent); color:#0B0B0D}
+  .btn.solid:hover{background:#D8C99A}
+  .btn.small{padding:9px 18px; font-size:.78rem; margin-top:0}
+  .kpis{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:20px 0 6px}
+  .kpi{border:1px solid var(--line); border-radius:6px; padding:20px 16px; text-align:center; background:rgba(20,20,23,.55)}
+  .kpi .lab{font-size:.72rem; letter-spacing:.2em; text-transform:uppercase; color:var(--dim); margin-bottom:8px}
+  .kpi .val{font-family:Georgia,serif; font-size:1.9rem; color:var(--accent)}
+  .kpi .val.plain{color:var(--text)}
+  table{width:100%; border-collapse:collapse; margin-top:14px; font-size:.93rem}
+  th{font-size:.72rem; letter-spacing:.18em; text-transform:uppercase; color:var(--dim); text-align:left;
+     padding:10px 8px; border-bottom:1px solid var(--line); font-weight:600}
+  td{padding:10px 8px; border-bottom:1px solid rgba(42,42,48,.55); font-variant-numeric:tabular-nums}
+  td.num, th.num{text-align:right}
+  tr.hit td{color:var(--accent)}
+  tr.dimrow td{color:var(--dim)}
+  .verdict{
+    border:1px solid var(--accent); border-radius:6px; padding:24px; margin-top:20px; text-align:center;
+    background:rgba(200,185,138,.05);
+  }
+  .verdict .big{font-family:Georgia,serif; font-size:2.1rem; color:var(--accent); margin:6px 0}
+  .verdict p{margin:8px auto 0; max-width:560px; color:var(--dim); font-size:.95rem}
+  .verdict p strong{color:var(--text)}
+  .qrow{
+    display:flex; align-items:center; gap:16px; border:1px solid var(--line); border-radius:6px;
+    padding:16px 18px; margin-bottom:10px; background:rgba(20,20,23,.55);
+  }
+  .qrow .q{font-family:Georgia,serif; font-style:italic; font-size:1.15rem; min-width:44px; color:var(--accent)}
+  .qrow .when{flex:1}
+  .qrow .when .d{font-size:.95rem}
+  .qrow .when .s{font-size:.8rem; color:var(--dim)}
+  .qrow .amt{font-family:Georgia,serif; font-size:1.3rem; font-variant-numeric:tabular-nums}
+  .qrow.paid{opacity:.55}
+  .qrow.paid .amt{color:var(--good); text-decoration:line-through}
+  .paidbtn{
+    border:1px solid var(--line); background:transparent; color:var(--dim); border-radius:20px;
+    padding:8px 18px; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; font-family:inherit;
+  }
+  .qrow.paid .paidbtn{border-color:var(--good); color:var(--good)}
+  .note{font-size:.85rem; color:var(--dim); margin-top:14px}
+  .note strong{color:var(--text)}
+  .scen{display:flex; align-items:center; gap:12px; border:1px solid var(--line); border-radius:6px;
+        padding:12px 16px; margin-bottom:8px; background:rgba(20,20,23,.55); font-size:.92rem}
+  .scen .nm{flex:1}
+  .scen button{background:none; border:1px solid var(--line); color:var(--dim); border-radius:4px;
+        padding:6px 14px; cursor:pointer; font-size:.78rem; font-family:inherit}
+  .scen button:hover{border-color:var(--accent); color:var(--accent)}
+  footer{margin-top:60px; border-top:1px solid var(--line); padding-top:24px; color:var(--dim); font-size:.82rem}
+  .mono{font-variant-numeric:tabular-nums}
+  @media (max-width:640px){
+    .steps,.kpis{grid-template-columns:1fr}
+    .grid2{grid-template-columns:1fr}
+    .panel{padding:20px 16px}
+    .qrow{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">The Bull Brew &middot; Accounting Series</div>
+  <h1>Estimated Tax, <em>Tamed.</em></h1>
+  <p class="lede">Quarterly estimated taxes are where landlords get <strong>ambushed every April</strong>.
+  This planner estimates your year's tax bill in plain English, splits it into four quarterly payments,
+  and shows you the <strong>safe-harbor rule</strong> that makes underpayment penalties mathematically impossible.</p>
+  <div class="rule"></div>
+
+  <div class="steps">
+    <div class="step"><span class="n">i.</span><p><strong>Tell it your income.</strong> Rental profit, other income, filing status, deductions. Thirty seconds.</p></div>
+    <div class="step"><span class="n">ii.</span><p><strong>Read the bill.</strong> See exactly how the brackets slice your income — and what each quarter costs.</p></div>
+    <div class="step"><span class="n">iii.</span><p><strong>Pay the safe number.</strong> The planner picks the quarterly amount that keeps penalties off your back.</p></div>
+  </div>
+
+  <h2 class="sec">Your numbers</h2>
+  <p class="sec-sub">Everything stays in your browser. Nothing is sent anywhere.</p>
+  <div class="panel">
+    <div class="grid2">
+      <div>
+        <label for="fstatus">Filing status</label>
+        <select id="fstatus">
+          <option value="single">Single</option>
+          <option value="joint">Married filing jointly</option>
+        </select>
+      </div>
+      <div>
+        <label for="rental">Annual rental profit ($)</label>
+        <input type="number" id="rental" min="0" step="100" value="60000">
+      </div>
+      <div>
+        <label for="other">Other income — W-2, interest, etc. ($)</label>
+        <input type="number" id="other" min="0" step="100" value="0">
+      </div>
+      <div>
+        <label for="deduct">Deductions ($)</label>
+        <input type="number" id="deduct" min="0" step="100" placeholder="Blank = standard deduction">
+      </div>
+      <div>
+        <label for="stateRate">State income tax rate (%)</label>
+        <input type="number" id="stateRate" min="0" max="15" step="0.1" value="0" placeholder="0 if none">
+      </div>
+      <div>
+        <label for="lastTax">Last year's total federal tax ($)</label>
+        <input type="number" id="lastTax" min="0" step="100" placeholder="For the safe-harbor math">
+      </div>
+    </div>
+    <div class="checkrow">
+      <input type="checkbox" id="hasSE">
+      <span>I also have <strong style="color:var(--text)">self-employment income</strong> (freelance, 1099 work — <em>not</em> rent; rent is passive and skips SE tax)</span>
+    </div>
+    <div id="seWrap" style="display:none">
+      <label for="seIncome">Annual self-employment profit ($)</label>
+      <input type="number" id="seIncome" min="0" step="100" value="0">
+    </div>
+    <div>
+      <label for="lastAGI">Last year's AGI ($) <span style="text-transform:none; letter-spacing:0">— only matters if it topped $150k</span></label>
+      <input type="number" id="lastAGI" min="0" step="1000" placeholder="Optional">
+    </div>
+    <button class="btn solid" id="calcBtn">Run the numbers</button>
+  </div>
+
+  <h2 class="sec">The bill</h2>
+  <p class="sec-sub">How the 2026 federal brackets slice your taxable income — one layer at a time.</p>
+  <div class="panel">
+    <div class="kpis">
+      <div class="kpi"><div class="lab">Taxable income</div><div class="val plain" id="kTaxable">—</div></div>
+      <div class="kpi"><div class="lab">Federal estimate</div><div class="val" id="kFed">—</div></div>
+      <div class="kpi"><div class="lab">Marginal rate</div><div class="val" id="kMarg">—</div></div>
+    </div>
+    <table id="bracketTable">
+      <thead><tr><th>Bracket</th><th class="num">Taxed at</th><th class="num">Income in layer</th><th class="num">Tax</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="seNote" class="note" style="display:none"></div>
+    <table id="totalTable" style="margin-top:18px">
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h2 class="sec">The safe harbor</h2>
+  <p class="sec-sub">The rule that lets you sleep. Read it once, use it forever.</p>
+  <div class="panel">
+    <p style="margin-top:0">The IRS charges an underpayment penalty when you pay too little, too late.
+    But there is a harbor: pay <strong>100% of last year's total tax</strong> in four equal, on-time quarterly
+    payments — <strong>110% if last year's AGI topped $150k</strong> — and you owe <strong>zero penalty</strong>,
+    even if this year's actual bill comes in higher. The harbor cares about last year's number, not this year's.</p>
+    <div class="verdict" id="harborVerdict" style="display:none">
+      <div style="font-size:.75rem; letter-spacing:.25em; text-transform:uppercase; color:var(--dim)">Pay this per quarter</div>
+      <div class="big" id="recQuarterly">—</div>
+      <p id="recWhy"></p>
+    </div>
+    <p class="note" id="harborNote">Enter last year's total federal tax above and the planner will compute your safe-harbor quarterly — then recommend whichever number is higher: the estimate, or the harbor.</p>
+  </div>
+
+  <h2 class="sec">The calendar</h2>
+  <p class="sec-sub">2026 tax year. Mark them paid as you go — it remembers.</p>
+  <div class="panel">
+    <div id="quarters"></div>
+    <p class="note" id="remainNote"></p>
+  </div>
+
+  <h2 class="sec">What if I earn more?</h2>
+  <p class="sec-sub">Drag it. Watch the marginal dollar do its damage.</p>
+  <div class="panel">
+    <label for="extraRange" style="margin-top:0">Extra income this year: <strong id="extraLab" style="color:var(--accent)">$0</strong></label>
+    <input type="range" id="extraRange" min="0" max="100000" step="5000" value="0">
+    <div class="kpis">
+      <div class="kpi"><div class="lab">Extra tax owed</div><div class="val" id="xTax">$0</div></div>
+      <div class="kpi"><div class="lab">New quarterly</div><div class="val plain" id="xQ">$0</div></div>
+      <div class="kpi"><div class="lab">Per $1k extra</div><div class="val plain" id="xK">$0</div></div>
+    </div>
+  </div>
+
+  <h2 class="sec">Saved scenarios</h2>
+  <p class="sec-sub">Name it, keep it. Compare this year against next year's plan.</p>
+  <div class="panel">
+    <div style="display:flex; gap:10px; flex-wrap:wrap">
+      <input type="text" id="scenName" placeholder="Scenario name — e.g. 2026 base case" style="flex:1; min-width:200px">
+      <button class="btn small solid" id="saveScen">Save</button>
+    </div>
+    <div id="scenList" style="margin-top:16px"></div>
+  </div>
+
+  <footer>
+    <p><strong style="color:var(--text)">Estimates only — not tax advice.</strong>
+    This planner uses 2026 federal brackets and the standard deduction, simplified state math, and the standard
+    safe-harbor rule. Real returns have credits, phaseouts, AMT, the Social Security wage-base cap on SE tax, and
+    fifty states' worth of quirks. Confirm the final numbers with a CPA before you file or pay.</p>
+    <p style="margin-top:10px; color:var(--accent); letter-spacing:.2em; text-transform:uppercase; font-size:.72rem">The Bull Brew · Built for landlords who hate April surprises</p>
+  </footer>
+</div>
+<script>
+/* Estimated Tax Planner — all client-side. 2026 tax year figures. */
+(function () {
+  "use strict";
+
+  /* ---------- constants ---------- */
+  var BRACKETS = {
+    single: [[0.10, 11925], [0.12, 48475], [0.22, 103350], [0.24, 197300], [0.32, 250525], [0.35, 626350], [0.37, Infinity]],
+    joint:  [[0.10, 23850], [0.12, 96950], [0.22, 206700], [0.24, 394600], [0.32, 501050], [0.35, 751600], [0.37, Infinity]]
+  };
+  var STD_DED = { single: 16100, joint: 32200 };          /* 2026, IRS IR-2025-103 */
+  var STD_LAB = { single: "single", joint: "married filing jointly" };
+  var SS_WAGE_BASE = 176100;                              /* Social Security wage base */
+  var ADD_MED = { single: 200000, joint: 250000 };         /* additional 0.9% Medicare threshold */
+  var DUE = [
+    { q: "Q1", label: "April 15, 2026",    y: 2026, m: 3, d: 15, s: "1st quarter — 2026 tax year" },
+    { q: "Q2", label: "June 15, 2026",     y: 2026, m: 5, d: 15, s: "2nd quarter — 2026 tax year" },
+    { q: "Q3", label: "September 15, 2026",y: 2026, m: 8, d: 15, s: "3rd quarter — 2026 tax year" },
+    { q: "Q4", label: "January 15, 2027",  y: 2027, m: 0, d: 15, s: "4th quarter — 2026 tax year" }
+  ];
+  var LS_INPUTS = "etp.inputs.v1", LS_PAID = "etp.paid.v1", LS_SCEN = "etp.scenarios.v1";
+
+  /* ---------- helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function num(id) { var v = parseFloat($(id).value); return isNaN(v) ? 0 : v; }
+  var fmt$ = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  function money(n) { return fmt$.format(Math.round(n)); }
+  function pct(r) { return (r * 100).toFixed(1).replace(/\.0$/, "") + "%"; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  }); }
+
+  /* ---------- tax math (pure) ---------- */
+  function federalTax(taxable, status) {
+    var b = BRACKETS[status], tax = 0, prev = 0, layers = [], marginal = 0.10, nextRate = 0.10;
+    for (var k = 0; k < b.length; k++) {
+      var rate = b[k][0], cap = b[k][1];
+      if (taxable <= prev) break;
+      var amt = Math.min(taxable, cap) - prev;
+      var t = amt * rate;
+      tax += t;
+      layers.push({ rate: rate, lo: prev, hi: Math.min(taxable, cap), amount: amt, tax: t });
+      marginal = rate;
+      prev = cap;
+    }
+    if (taxable > 0 && taxable < Infinity) {
+      for (var j = 0; j < b.length; j++) {
+        if (taxable < b[j][1]) { nextRate = b[j][0]; break; }
+      }
+    }
+    return { tax: tax, layers: layers, marginal: marginal, nextRate: nextRate };
+  }
+
+  function seTax(seIncome, status) {
+    if (!(seIncome > 0)) return { total: 0, net: 0, ss: 0, med: 0, addl: 0 };
+    var net = seIncome * 0.9235;                                   /* net earnings */
+    var ss = Math.min(net, SS_WAGE_BASE) * 0.153;                   /* 12.4% SS + 2.9% Medicare */
+    var med = Math.max(0, net - SS_WAGE_BASE) * 0.029;              /* Medicare above the wage base */
+    var addl = Math.max(0, net - ADD_MED[status]) * 0.009;          /* additional 0.9% Medicare */
+    return { total: ss + med + addl, net: net, ss: ss, med: med, addl: addl };
+  }
+
+  /* ---------- io ---------- */
+  function readInputs() {
+    return {
+      status: $("fstatus").value,
+      rental: num("rental"),
+      other: num("other"),
+      deductIn: num("deduct"),
+      stateRate: num("stateRate"),
+      lastTax: num("lastTax"),
+      lastAGI: num("lastAGI"),
+      hasSE: $("hasSE").checked,
+      seIncome: num("seIncome"),
+      extra: num("extraRange")
+    };
+  }
+
+  function saveInputs() {
+    try { localStorage.setItem(LS_INPUTS, JSON.stringify(readInputs())); } catch (e) {}
+  }
+
+  var INPUT_IDS = ["rental", "other", "deduct", "stateRate", "lastTax", "lastAGI", "seIncome", "extraRange"];
+  var ID2KEY = { rental: "rental", other: "other", deduct: "deductIn", stateRate: "stateRate",
+                 lastTax: "lastTax", lastAGI: "lastAGI", seIncome: "seIncome", extraRange: "extra" };
+
+  function applyInputs(s) {
+    if (s.status) $("fstatus").value = s.status;
+    INPUT_IDS.forEach(function (id) {
+      if (typeof s[ID2KEY[id]] === "number") $(id).value = s[ID2KEY[id]];
+    });
+    $("hasSE").checked = !!s.hasSE;
+  }
+
+  function restoreInputs() {
+    var raw = null;
+    try { raw = localStorage.getItem(LS_INPUTS); } catch (e) {}
+    if (!raw) return;
+    try { applyInputs(JSON.parse(raw)); } catch (e) {}
+  }
+
+  function getPaid() {
+    try { return JSON.parse(localStorage.getItem(LS_PAID) || "{}"); } catch (e) { return {}; }
+  }
+  function setPaid(p) {
+    try { localStorage.setItem(LS_PAID, JSON.stringify(p)); } catch (e) {}
+  }
+
+  function getScenarios() {
+    try { return JSON.parse(localStorage.getItem(LS_SCEN) || "[]"); } catch (e) { return []; }
+  }
+  function setScenarios(a) {
+    try { localStorage.setItem(LS_SCEN, JSON.stringify(a)); } catch (e) {}
+  }
+
+  /* ---------- render ---------- */
+  function renderBrackets(fed, taxable) {
+    var tb = $("bracketTable").querySelector("tbody"), html = "";
+    if (taxable <= 0) {
+      html = '<tr class="dimrow"><td colspan="4">No taxable income — the brackets stay empty. Your first dollar would be taxed at 10%.</td></tr>';
+    } else {
+      fed.layers.forEach(function (L, idx) {
+        var last = idx === fed.layers.length - 1;
+        html += '<tr' + (last ? ' class="hit"' : '') + '><td>' + money(L.lo) + " – " + (L.hi === Infinity ? "up" : money(L.hi)) +
+          '</td><td class="num">' + pct(L.rate) + '</td><td class="num">' + money(L.amount) +
+          '</td><td class="num">' + money(L.tax) + "</td></tr>";
+      });
+      html += '<tr class="dimrow"><td colspan="3">Your next dollar is taxed at</td><td class="num">' + pct(fed.nextRate) + "</td></tr>";
+    }
+    tb.innerHTML = html;
+  }
+
+  function renderTotals(fed, se, stateTax, stateRate, total, quarterly, recommended, hasSE, seIncome) {
+    var rows = "";
+    rows += "<tr><td>Federal income tax</td><td class='num'>" + money(fed.tax) + "</td></tr>";
+    if (hasSE && seIncome > 0) {
+      rows += "<tr><td>Self-employment tax</td><td class='num'>" + money(se.total) + "</td></tr>";
+    }
+    if (stateRate > 0) {
+      rows += "<tr><td>State income tax (" + stateRate + "% of taxable)</td><td class='num'>" + money(stateTax) + "</td></tr>";
+    }
+    rows += "<tr><td><strong>Estimated annual tax</strong></td><td class='num'><strong>" + money(total) + "</strong></td></tr>";
+    rows += '<tr class="hit"><td>Recommended quarterly payment</td><td class="num">' + money(recommended) + "</td></tr>";
+    $("totalTable").querySelector("tbody").innerHTML = rows;
+  }
+
+  function renderSeNote(se, hasSE, seIncome) {
+    var el = $("seNote");
+    if (!(hasSE && seIncome > 0)) { el.style.display = "none"; el.innerHTML = ""; return; }
+    var parts = "15.3% on the first " + money(SS_WAGE_BASE) + " of net earnings (" + money(se.ss) + ")";
+    if (se.med > 0) parts += " + 2.9% Medicare above it (" + money(se.med) + ")";
+    if (se.addl > 0) parts += " + 0.9% additional Medicare (" + money(se.addl) + ")";
+    el.innerHTML = "<strong>Self-employment tax:</strong> " + parts + ". Net earnings = 92.35% of profit. " +
+      "Note: SE profit is also subject to <em>income</em> tax — add it to \u201COther income\u201D above to include it in the federal estimate.";
+    el.style.display = "block";
+  }
+
+  function renderDedNote(usedStd, std, status, deductIn) {
+    var kpi = document.querySelectorAll(".kpis")[0], note = $("dedNote");
+    if (!note) {
+      note = document.createElement("p");
+      note.className = "note"; note.id = "dedNote";
+      kpi.parentNode.insertBefore(note, kpi.nextSibling);
+    }
+    note.innerHTML = usedStd
+      ? "Using the <strong>2026 standard deduction</strong> (" + STD_LAB[status] + ": " + money(std) + ") — enter your own deductions above to override."
+      : "Using your entered deductions of <strong>" + money(deductIn) + "</strong>.";
+  }
+
+  function renderHarbor(harbor, quarterly, recommended, lastTax) {
+    var v = $("harborVerdict"), why = $("recWhy"), note = $("harborNote");
+    v.style.display = "block";
+    $("recQuarterly").textContent = money(recommended);
+    if (harbor) {
+      var hq = money(harbor.q), eq = money(quarterly);
+      if (harbor.q > quarterly + 0.5) {
+        why.innerHTML = "The safe harbor (<strong>" + hq + "/qtr</strong>) beats your estimate (" + eq + "/qtr). " +
+          "Pay the harbor number in four equal, on-time payments and the underpayment penalty is <strong>off the table</strong> — even if this year comes in hotter.";
+      } else if (quarterly > harbor.q + 0.5) {
+        why.innerHTML = "Your estimate (<strong>" + eq + "/qtr</strong>) already covers the safe harbor (" + hq + "/qtr). " +
+          "Pay the estimate — you're protected either way.";
+      } else {
+        why.innerHTML = "Your estimate and the safe harbor agree at <strong>" + eq + "/qtr</strong>. Pay it and move on.";
+      }
+      note.innerHTML = "Safe-harbor math: <strong>" + (harbor.mult === 1.10 ? "110%" : "100%") + " × " + money(lastTax) +
+        "</strong> (last year's total tax" + (harbor.mult === 1.10 ? ", AGI topped $150k" : "") + ") = " +
+        money(harbor.req) + "/yr → <strong>" + hq + " per quarter</strong>.";
+    } else {
+      why.innerHTML = "No safe-harbor number entered — this is your <strong>pure estimate</strong>. " +
+        "Add last year's total tax above and the planner will compare it against the penalty-proof harbor amount.";
+      note.textContent = "Enter last year's total federal tax above and the planner will compute your safe-harbor quarterly — then recommend whichever number is higher: the estimate, or the harbor.";
+    }
+  }
+
+  function daysUntil(y, m, d) {
+    var now = new Date(); now.setHours(0, 0, 0, 0);
+    return Math.round((new Date(y, m, d) - now) / 86400000);
+  }
+
+  function renderQuarters(recommended) {
+    var paid = getPaid(), box = $("quarters"), html = "", unpaid = 0;
+    DUE.forEach(function (D, idx) {
+      var key = "q" + (idx + 1), isPaid = !!paid[key], n = daysUntil(D.y, D.m, D.d);
+      var status = n < 0 ? "past due" : (n === 0 ? "due today" : (n <= 45 ? "due in " + n + " days" : ""));
+      if (!isPaid) unpaid++;
+      html += '<div class="qrow' + (isPaid ? " paid" : "") + '" data-key="' + key + '">' +
+        '<div class="q">' + D.q + '</div>' +
+        '<div class="when"><div class="d">' + D.label + (status ? ' <span style="color:var(--warn)">' + esc(status) + "</span>" : "") +
+        '</div><div class="s">' + D.s + "</div></div>" +
+        '<div class="amt">' + money(recommended) + "</div>" +
+        '<button class="paidbtn" type="button">' + (isPaid ? "Paid ✓" : "Mark paid") + "</button></div>";
+    });
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll(".paidbtn"), function (btn) {
+      btn.addEventListener("click", function () {
+        var key = btn.closest(".qrow").getAttribute("data-key");
+        var p = getPaid(); p[key] = !p[key]; setPaid(p);
+        renderQuarters(recommended);
+      });
+    });
+    var rn = $("remainNote");
+    if (recommended <= 0) {
+      rn.innerHTML = "Nothing owed — <strong>$0</strong> across the board.";
+    } else if (unpaid === 0) {
+      rn.innerHTML = "<strong>All four quarters marked paid.</strong> April has nothing on you.";
+    } else {
+      rn.innerHTML = "Unpaid remaining: <strong>" + money(unpaid * recommended) + "</strong> across " + unpaid + " quarter" + (unpaid === 1 ? "" : "s") + ".";
+    }
+  }
+
+  function renderWhatIf(extra, fedMarginal, stateRate, total) {
+    $("extraLab").textContent = money(extra);
+    var eff = fedMarginal + stateRate / 100;
+    var xTax = extra * eff;
+    $("xTax").textContent = money(xTax);
+    $("xQ").textContent = money((total + xTax) / 4);
+    $("xK").textContent = money(1000 * eff);
+  }
+
+  function renderScenarios() {
+    var list = getScenarios(), box = $("scenList");
+    if (!list.length) {
+      box.innerHTML = '<p class="note" style="margin:0">No saved scenarios yet. Dial in a plan above and save it.</p>';
+      return;
+    }
+    var html = "";
+    list.forEach(function (s, idx) {
+      var when = "";
+      try { when = new Date(s.ts).toLocaleDateString(); } catch (e) {}
+      html += '<div class="scen"><div class="nm"><strong>' + esc(s.name) + '</strong>' +
+        (when ? ' <span style="color:var(--dim)">· ' + esc(when) + "</span>" : "") +
+        '</div><button type="button" data-act="load" data-idx="' + idx + '">Load</button>' +
+        '<button type="button" data-act="del" data-idx="' + idx + '">Delete</button></div>';
+    });
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll("button"), function (btn) {
+      btn.addEventListener("click", function () {
+        var idx = parseInt(btn.getAttribute("data-idx"), 10), act = btn.getAttribute("data-act");
+        var arr = getScenarios();
+        if (act === "del") { arr.splice(idx, 1); setScenarios(arr); renderScenarios(); return; }
+        var s = arr[idx];
+        if (!s) return;
+        applyInputs(s.inputs || {});
+        onEdit();
+      });
+    });
+  }
+
+  /* ---------- main calc ---------- */
+  function calc() {
+    var i = readInputs();
+    var std = STD_DED[i.status];
+    var usedStd = !(i.deductIn > 0);
+    var deduct = usedStd ? std : i.deductIn;
+    var taxable = Math.max(0, i.rental + i.other - deduct);
+    var fed = federalTax(taxable, i.status);
+    var se = seTax(i.hasSE ? i.seIncome : 0, i.status);
+    var stateTax = taxable * (i.stateRate / 100);
+    var total = fed.tax + se.total + stateTax;
+    var quarterly = total / 4;
+
+    var harbor = null;
+    if (i.lastTax > 0) {
+      var mult = i.lastAGI > 150000 ? 1.10 : 1.00;
+      harbor = { req: i.lastTax * mult, mult: mult, q: (i.lastTax * mult) / 4 };
+    }
+    var recommended = harbor ? Math.max(quarterly, harbor.q) : quarterly;
+
+    $("kTaxable").textContent = money(taxable);
+    $("kFed").textContent = money(fed.tax);
+    $("kMarg").textContent = taxable > 0 ? pct(fed.marginal) : "0%";
+
+    renderDedNote(usedStd, std, i.status, i.deductIn);
+    renderBrackets(fed, taxable);
+    renderSeNote(se, i.hasSE, i.seIncome);
+    renderTotals(fed, se, stateTax, i.stateRate, total, quarterly, recommended, i.hasSE, i.seIncome);
+    renderHarbor(harbor, quarterly, recommended, i.lastTax);
+    renderQuarters(recommended);
+    renderWhatIf(i.extra, fed.marginal, i.stateRate, total);
+  }
+
+  function onEdit() {
+    $("seWrap").style.display = $("hasSE").checked ? "block" : "none";
+    saveInputs();
+    calc();
+  }
+
+  /* ---------- wire up ---------- */
+  ["rental", "other", "fstatus", "deduct", "stateRate", "lastTax", "lastAGI", "hasSE", "seIncome", "extraRange"]
+    .forEach(function (id) {
+      var el = $(id);
+      el.addEventListener("input", onEdit);
+      el.addEventListener("change", onEdit);
+    });
+  $("calcBtn").addEventListener("click", function () { saveInputs(); calc(); });
+  $("saveScen").addEventListener("click", function () {
+    var name = $("scenName").value.trim() || ("Scenario " + (getScenarios().length + 1));
+    var arr = getScenarios();
+    arr.push({ name: name, ts: Date.now(), inputs: readInputs() });
+    setScenarios(arr);
+    $("scenName").value = "";
+    renderScenarios();
+  });
+
+  /* ---------- init ---------- */
+  restoreInputs();
+  $("seWrap").style.display = $("hasSE").checked ? "block" : "none";
+  renderScenarios();
+  calc();
+
+  /* expose pure math for testing */
+  if (typeof window !== "undefined") { window.__etp = { federalTax: federalTax, seTax: seTax }; }
+})();
+</script>
+</body>
+</html>
